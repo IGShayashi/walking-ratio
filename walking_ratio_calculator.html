@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>歩行比 リアルタイム計算機</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", sans-serif;
+    background: #f5f4f0;
+    color: #1a1a18;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #5f5e5a;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: #fff;
+    border: 0.5px solid #d3d1c7;
+    border-radius: 12px;
+    padding: 20px 20px;
+    margin-bottom: 16px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .card-title {
+    font-size: 13px;
+    color: #5f5e5a;
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .slider-label {
+    font-size: 13px;
+    color: #444441;
+    min-width: 150px;
+  }
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: #d3d1c7;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #378add;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #b5d4f4;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #378add;
+    cursor: pointer;
+    border: 2px solid #fff;
+  }
+  .slider-val {
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 80px;
+    text-align: right;
+    color: #1a1a18;
+  }
+
+  /* Result area */
+  .result-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .result-label { font-size: 13px; color: #5f5e5a; }
+  .result-num {
+    font-size: 36px;
+    font-weight: 500;
+    color: #1a1a18;
+    line-height: 1;
+  }
+  .result-unit { font-size: 13px; color: #5f5e5a; }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 12px;
+    border-radius: 6px;
+    margin-left: 4px;
+  }
+  .badge-ok   { background: #eaf3de; color: #3b6d11; }
+  .badge-low  { background: #fcebeb; color: #a32d2d; }
+  .badge-high { background: #faeeda; color: #854f0b; }
+
+  .comment {
+    font-size: 12px;
+    color: #5f5e5a;
+    margin-top: 10px;
+    line-height: 1.6;
+    min-height: 36px;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .stat-box {
+    background: #f5f4f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .stat-box-label {
+    font-size: 11px;
+    color: #5f5e5a;
+    margin-bottom: 4px;
+  }
+  .stat-box-val {
+    font-size: 18px;
+    font-weight: 500;
+    color: #1a1a18;
+  }
+
+  /* Range bar */
+  .range-bar-wrap {
+    margin-top: 16px;
+  }
+  .range-bar-title {
+    font-size: 12px;
+    color: #5f5e5a;
+    margin-bottom: 6px;
+  }
+  .range-bar-track {
+    position: relative;
+    height: 8px;
+    background: #d3d1c7;
+    border-radius: 4px;
+    overflow: visible;
+  }
+  .range-bar-normal {
+    position: absolute;
+    top: 0; height: 8px;
+    background: #9fe1cb;
+    border-radius: 4px;
+  }
+  .range-bar-cursor {
+    position: absolute;
+    top: -4px;
+    width: 4px;
+    height: 16px;
+    background: #D85A30;
+    border-radius: 2px;
+    transform: translateX(-50%);
+    transition: left 0.15s;
+  }
+  .range-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #888780;
+    margin-top: 4px;
+  }
+
+  /* Reference table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    background: #f5f4f0;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 500;
+    color: #444441;
+    border-bottom: 0.5px solid #d3d1c7;
+  }
+  td {
+    padding: 8px 10px;
+    border-bottom: 0.5px solid #e8e7e2;
+    color: #1a1a18;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+
+  .note {
+    font-size: 11px;
+    color: #888780;
+    text-align: center;
+    margin-top: 8px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  @media (max-width: 480px) {
+    .slider-label { min-width: 110px; font-size: 12px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .result-num { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>歩行比 リアルタイム計算機</h1>
+<p class="subtitle">スライダーを動かすと歩行比・歩行速度がリアルタイムで更新されます</p>
+
+<!-- スライダーカード -->
+<div class="card">
+  <div class="card-title">パラメータ入力</div>
+
+  <div class="slider-row">
+    <span class="slider-label">歩幅（step length）</span>
+    <input type="range" id="sl" min="20" max="100" value="70" step="1" oninput="calc()">
+    <span class="slider-val" id="sl-val">0.70 m</span>
+  </div>
+
+  <div class="slider-row">
+    <span class="slider-label">歩行率（cadence）</span>
+    <input type="range" id="cd" min="60" max="160" value="110" step="1" oninput="calc()">
+    <span class="slider-val" id="cd-val">110 歩/分</span>
+  </div>
+</div>
+
+<!-- 結果カード -->
+<div class="card">
+  <div class="card-title">計算結果</div>
+
+  <div class="result-main">
+    <span class="result-label">歩行比</span>
+    <span class="result-num" id="wr-result">0.00636</span>
+    <span class="result-unit">m·min/歩</span>
+    <span class="badge badge-ok" id="wr-badge">正常範囲</span>
+  </div>
+
+  <div class="comment" id="wr-comment">歩行比は正常範囲内です。歩幅と歩行率のバランスが取れた効率的な歩行パターンといえます。</div>
+
+  <!-- 範囲バー -->
+  <div class="range-bar-wrap">
+    <div class="range-bar-title">歩行比の位置（目安範囲 0.0030〜0.0100）</div>
+    <div class="range-bar-track" id="rbar">
+      <div class="range-bar-normal" style="left:35.7%; width:24.5%"></div>
+      <div class="range-bar-cursor" id="rbar-cursor" style="left:43%"></div>
+    </div>
+    <div class="range-bar-labels">
+      <span>0.0030</span>
+      <span>低値</span>
+      <span>正常 0.0055〜0.0072</span>
+      <span>高値</span>
+      <span>0.0100</span>
+    </div>
+  </div>
+
+  <!-- 派生指標 -->
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-box-label">歩行速度</div>
+      <div class="stat-box-val" id="speed-mpm">77 m/分</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box-label">歩行速度</div>
+      <div class="stat-box-val" id="speed-kmh">4.6 km/h</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box-label">重複歩長</div>
+      <div class="stat-box-val" id="stride-len">1.40 m</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box-label">重複歩率</div>
+      <div class="stat-box-val" id="stride-rate">55 回/分</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box-label">1歩あたり時間</div>
+      <div class="stat-box-val" id="step-time">0.55 秒</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box-label">1周期時間</div>
+      <div class="stat-box-val" id="cycle-time">1.09 秒</div>
+    </div>
+  </div>
+</div>
+
+<!-- 参考テーブル -->
+<div class="card">
+  <div class="card-title">歩行比の参考値（文献値の目安）</div>
+  <table>
+    <thead>
+      <tr>
+        <th>対象</th>
+        <th>歩行比の目安</th>
+        <th>特徴</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>健常成人</td>
+        <td>0.0060〜0.0072</td>
+        <td>歩幅・歩行率のバランス良好</td>
+      </tr>
+      <tr>
+        <td>高齢者（健常）</td>
+        <td>0.0055〜0.0065</td>
+        <td>やや低値（歩幅縮小・歩行率増加）</td>
+      </tr>
+      <tr>
+        <td>パーキンソン病</td>
+        <td>0.0040〜0.0055</td>
+        <td>低値（小刻み歩行）</td>
+      </tr>
+      <tr>
+        <td>脳卒中後（片麻痺）</td>
+        <td>0.0040〜0.0060</td>
+        <td>左右非対称、歩幅縮小</td>
+      </tr>
+      <tr>
+        <td>変形性膝関節症</td>
+        <td>0.0050〜0.0065</td>
+        <td>疼痛回避による歩幅縮小</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="note">※ 数値は歩行速度・体重・靴・個人差により変動します。文献値の代表的な範囲を示しています。<br>参考：Hase &amp; Stein (1999), Perry &amp; Burnfield (2010), 江原・山本 (2002) 他</p>
+
+<script>
+function calc() {
+  const slCm = parseInt(document.getElementById('sl').value);
+  const cd   = parseInt(document.getElementById('cd').value);
+  const slM  = slCm / 100;
+  const wr   = slM / cd;
+  const speed = slM * cd;
+  const kmh  = speed * 60 / 1000;
+  const strideLen  = slM * 2;
+  const strideRate = cd / 2;
+  const stepTime   = 60 / cd;
+  const cycleTime  = stepTime * 2;
+
+  document.getElementById('sl-val').textContent   = slM.toFixed(2) + ' m';
+  document.getElementById('cd-val').textContent   = cd + ' 歩/分';
+  document.getElementById('wr-result').textContent = wr.toFixed(5);
+  document.getElementById('speed-mpm').textContent = Math.round(speed) + ' m/分';
+  document.getElementById('speed-kmh').textContent = kmh.toFixed(1) + ' km/h';
+  document.getElementById('stride-len').textContent  = strideLen.toFixed(2) + ' m';
+  document.getElementById('stride-rate').textContent = Math.round(strideRate) + ' 回/分';
+  document.getElementById('step-time').textContent   = stepTime.toFixed(2) + ' 秒';
+  document.getElementById('cycle-time').textContent  = cycleTime.toFixed(2) + ' 秒';
+
+  // バッジとコメント
+  const badge   = document.getElementById('wr-badge');
+  const comment = document.getElementById('wr-comment');
+  badge.className = 'badge';
+  if (wr < 0.0055) {
+    badge.classList.add('badge-low');
+    badge.textContent = '低値（要注意）';
+    comment.textContent = '歩行比が低め → 歩行率に対して歩幅が小さい状態です。小刻み歩行（パーキンソン病など）や加齢性の歩行変化でみられます。';
+  } else if (wr > 0.0072) {
+    badge.classList.add('badge-high');
+    badge.textContent = '高値';
+    comment.textContent = '歩行比が高め → 歩行率に対して歩幅が大きい状態です。大股・低ケイデンスの歩行パターンです。';
+  } else {
+    badge.classList.add('badge-ok');
+    badge.textContent = '正常範囲';
+    comment.textContent = '歩行比は正常範囲内です。歩幅と歩行率のバランスが取れた効率的な歩行パターンといえます。';
+  }
+
+  // 範囲バーカーソル（0.0030〜0.0100 を 0%〜100% にマッピング）
+  const min = 0.0030, max = 0.0100;
+  const pct = Math.min(100, Math.max(0, (wr - min) / (max - min) * 100));
+  document.getElementById('rbar-cursor').style.left = pct.toFixed(1) + '%';
+}
+
+calc();
+</script>
+</body>
+</html>
